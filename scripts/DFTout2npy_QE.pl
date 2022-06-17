@@ -155,12 +155,12 @@ for my $id (0..$#out){
 
 # get system volume for virial (in unit of eV)
 # new unit-cell volume =   1707.20246 a.u.^3 (   252.98130 Ang^3 )	
-# 0 for scf
+# 0 for scf and relax, mainly for vc-relax and vc-md
 	my @newcellVol = grep {if(m/^\s+new unit-cell volume.+\(\s+(.+)\s+Ang\^3\s+\)/){$_ = $1;}} @all;
     chomp @newcellVol;
 
 # unit-cell volume =   1707.20246 a.u.^3
-# 1 for scf and md, 2 for vc-relax (if done)  	
+# 1 for scf, relax, and md, 2 for vc-relax (if done)  	
 	my @cellVol = grep {if(m/^\s+unit-cell volume\s+=\s+(.+)\s+\(a.u.\)\^3/){$_=$1*$bohr2ang3;}} @all;
     chomp @cellVol;
 	
@@ -185,15 +185,19 @@ You need to do vc-relax, scf or drop this case by modifying all_setting.pm!\n" i
 	my @virial;
 	#for (0..$#totalstress){print "$_,$totalstress[$_]\n"; }
 	
-	my $vol_counter = 0;
+	my $vol_counter = 0;#virial = vol* stress. stresses of a frame distributes in three rows 
 	for(@totalstress){
-	  my $temp = int ($vol_counter/3);
+	  my $temp = int ($vol_counter/3);#counter for using @newcellVol when vc-relax or vc-md
 		if(m/^\s+[-+]?\d+\.?\d+\s+[-+]?\d+\.?\d+\s+[-+]?\d+\.?\d+\s+([-+]?\d+\.?\d+)\s+([-+]?\d+\.?\d+)\s+([-+]?\d+\.?\d+)/){
-			if($temp == 0){
-				push @virial, [$1*$kbar2evperang3*$cellVol[$temp],$2*$kbar2evperang3*$cellVol[$temp],$3*$kbar2evperang3*$cellVol[$temp]];
+			if($temp == 0 or $cal_type eq "relax"){#scf, relax, md only has @cellVol,@newcellVol is undefined
+			    #For vc-relax and vc-md, @cellVol keeps the initial volume value (the same as in file)
+				#print "test: $1,$cellVol[0]\n";
+				
+				push @virial, [$1*$kbar2evperang3*$cellVol[0],$2*$kbar2evperang3*$cellVol[0],$3*$kbar2evperang3*$cellVol[0]];
 	  			$vol_counter++;
 			}
 			else{
+				#print "test: $1,$newcellVol[$temp - 1]\n";
 				push @virial, [$1*$kbar2evperang3*$newcellVol[$temp - 1],$2*$kbar2evperang3*$newcellVol[$temp - 1],$3*$kbar2evperang3*$newcellVol[$temp - 1]];
 				$vol_counter++;
 			}  
@@ -292,9 +296,10 @@ You need to do vc-relax, scf or drop this case by modifying all_setting.pm!\n" i
 	}    
     die "no cell vector was found in $out[$id]\n" unless (@cell);
     my $cellNo = @cell/3;
-	#MD has one more 
-	die "cell vector set number $cellNo is fewer than the energy number $energyNo in $out[$id]\n" if ($energyNo > $cellNo);
-
+	#MD has one more
+	if($cal_type ne "relax"){#for relax, only cell information can be found in QE in file 
+		die "cell vector set number $cellNo is fewer than the energy number $energyNo in $out[$id]\n" if ($energyNo > $cellNo);
+	}
 	for my $idc (1..@cell/3){#@virial has three elements
 		my $temp = ($idc -1) * 3;
 		chomp (@{$cell[$temp]}[0..2],@{$cell[$temp + 1]}[0..2],@{$cell[$temp + 2]}[0..2]);
@@ -316,7 +321,7 @@ for my $f (@npy){
 	open my $t ,">$filepath";
     my @raw = @{ $raw_ref{$f} };
 	#print "\n***$f\n";
-	if ($cal_type eq "vc-relax"){#ONLY NEED THE LAST ONES
+	if ($cal_type eq "vc-relax" or $cal_type eq "relax"){#ONLY NEED THE LAST ONES
 		
 			my $r = $raw[-1];
 			if ($f eq "energy"){
