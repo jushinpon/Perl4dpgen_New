@@ -15,13 +15,13 @@ chdir("..");
 my $mainPath = getcwd();# main path of Perl4dpgen dir
 chdir("$currentPath");
 my $NVT4str = "yes";
-my @allNVTstru = ("Al-12345");#("bcc_bulk");#,"fcc_bulk","hcp_bulk");for surface
+my @allNVTstru = ("N2","N25","N154","N570747","N672233","N754514","N999498","N1061298","N1080711","N1176403");#("bcc_bulk");#,"fcc_bulk","hcp_bulk");for surface
 # should have the same names as in the initial folder
-my $NPT4str = "yes";
-my @allNPTstru = ("Al-12345");
+my $NPT4str = "no";
+my @allNPTstru = ("N2","N25","N154","N570747","N672233","N754514","N999498","N1061298","N1080711","N1176403");
 my @allPress = (1,10000);#unit:bar,the pressures your want to use for labelling
 my @allStep = (3000,6000);#time step number, should be larger than 500 (default output_freq)
-my @allIniStr = ("Al-12345");#for the fisrt dp train,should include all structures for labeling
+my @allIniStr = ("N2","N25","N154","N570747","N672233","N754514","N999498","N1061298","N1080711","N1176403");#for the fisrt dp train,should include all structures for labeling
 #"bcc_bulk",
 my %system_setting;
 $system_setting{jobtype} = "new";#"new";#check readme
@@ -43,11 +43,11 @@ $system_setting{T_incNo} = 2;#total increment number from T_lo to T_hi,
 $system_setting{T_No} = 1;#how many temperatures you want to consider within a temperature range
 
 my %dptrain_setting; 
-$dptrain_setting{type_map} = [("Al")];# json template file
+$dptrain_setting{type_map} = [("N")];# json template file
 $dptrain_setting{json_script} = "$currentPath/template.json";# json template file
 $dptrain_setting{json_outdir} = "$mainPath/dp_train";
 $dptrain_setting{working_dir} = "$mainPath/dp_train";
-$dptrain_setting{trainstep} = 2000;#you may set a smaller train step for the first several dpgen processes
+$dptrain_setting{trainstep} = 200000;#you may set a smaller train step for the first several dpgen processes
 $dptrain_setting{compresstrainstep} = 80000;
 $dptrain_setting{final_trainstep} = 200000;
 $dptrain_setting{final_compresstrainstep} = 400000;
@@ -74,12 +74,12 @@ my %npy_setting;# most by dynamical setting
 #lmp setting
 my %lmp_setting;#from main
 
-$lmp_setting{masses}  = [(26.98154)];#masses for lmp script
+$lmp_setting{masses}  = [(14.0067)];#masses for lmp script
 $lmp_setting{ori_lmp_script}  = "$mainPath/scripts/lmp_script.in";#lmp script template, the same folder as this perl
 $lmp_setting{ori_slurm_script}  = "$mainPath/scripts/slurm_lmp.sh";#slurm script template
 $lmp_setting{lmp_working_dir}  = "$mainPath/lmp_label";#folder for all lmp jobs
 $lmp_setting{lmp_graph_dir}  = "$mainPath/dp_train";#folder for all lmp jobs
-$lmp_setting{maxlabel}  = 2;#max number for labeling data files
+$lmp_setting{maxlabel}  = 10;#max number for labeling data files
 $lmp_setting{upper_bound}  = 0.5;#if dft has convergence problem, decrease it.
 $lmp_setting{lower_bound}  = 0.01;#lower bound for labelling. smaller value,0.01, for fewer initial structures
 $lmp_setting{out_freq}  = 500;#data file and deviation output freq
