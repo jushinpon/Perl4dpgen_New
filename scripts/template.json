@@ -10,7 +10,7 @@
     },
     "model": {
         "type_map": [
-            "Mo"
+            "N"
         ],
         "descriptor": {
             "axis_neuron": 12,
