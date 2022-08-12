@@ -24,7 +24,7 @@ my $mainPath = getcwd();# main path of Perl4dpgen dir
 chdir("$currentPath");
 
 my %dptrain_setting; 
-$dptrain_setting{type_map} = [("N")];# json template file
+$dptrain_setting{type_map} = [("Ag")];# json template file
 $dptrain_setting{valid_ratio} = 0.2;# the validation ratio for all setXX folders,0.2 means 20 % of all set folders
 $dptrain_setting{json_script} = "$currentPath/template.json";# json template file
 $dptrain_setting{work_dir} = "$mainPath/$ref_dir";#main dir for standalone dp train
@@ -34,8 +34,8 @@ $dptrain_setting{decay_steps} = 1000;
 $dptrain_setting{disp_freq} = 1000;
 $dptrain_setting{save_freq} = 1000;
 $dptrain_setting{start_lr} = 0.001;
-$dptrain_setting{rcut} = 5.000000000001;
-$dptrain_setting{rcut_smth} = 4.00000001;
+$dptrain_setting{rcut} = 8.000000000001;
+$dptrain_setting{rcut_smth} = 2.00000001;
 $dptrain_setting{descriptor_type} = "se_e2_a";
 $dptrain_setting{save_ckpt} = "model.ckpt";
 $dptrain_setting{disp_file} = "lcurve.out";

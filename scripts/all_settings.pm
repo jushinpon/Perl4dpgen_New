@@ -14,14 +14,14 @@ my $currentPath = getcwd();# dir for all scripts
 chdir("..");
 my $mainPath = getcwd();# main path of Perl4dpgen dir
 chdir("$currentPath");
-my $NVT4str = "yes";
-my @allNVTstru = ("N2","N25","N154","N570747","N672233","N754514","N999498","N1061298","N1080711","N1176403");#("bcc_bulk");#,"fcc_bulk","hcp_bulk");for surface
+my $NVT4str = "no";
+my @allNVTstru = ("Ag_mp-10597","Ag_mp-8566","Ag_mp-989737","Opt-Afcc-Ag","Scf-Afcc-Ag");#("bcc_bulk");#,"fcc_bulk","hcp_bulk");for surface
 # should have the same names as in the initial folder
-my $NPT4str = "no";
-my @allNPTstru = ("N2","N25","N154","N570747","N672233","N754514","N999498","N1061298","N1080711","N1176403");
+my $NPT4str = "yes";
+my @allNPTstru = ("Ag_mp-10597","Ag_mp-8566","Ag_mp-989737","Opt-Afcc-Ag","Scf-Afcc-Ag");
 my @allPress = (1,10000);#unit:bar,the pressures your want to use for labelling
 my @allStep = (3000,6000);#time step number, should be larger than 500 (default output_freq)
-my @allIniStr = ("N2","N25","N154","N570747","N672233","N754514","N999498","N1061298","N1080711","N1176403");#for the fisrt dp train,should include all structures for labeling
+my @allIniStr =  ("Ag_mp-10597","Ag_mp-8566","Ag_mp-989737","Opt-Afcc-Ag","Scf-Afcc-Ag");#for the fisrt dp train,should include all structures for labeling
 #"bcc_bulk",
 my %system_setting;
 $system_setting{jobtype} = "new";#"new";#check readme
@@ -29,7 +29,7 @@ $system_setting{begIter} = 0;#0 for $system_setting{jobtype} = "new" or "dpgen_a
 #for rerun, check readme
 $system_setting{debug} = "yes";#no for a brand new run
 $system_setting{dft_exe} = "/opt/QEGCC_MPICH3.4.2/bin/pw.x";#not workable, you need to modify this in slurm batch and partition
-$system_setting{lmp_exe} = "/opt/lammps-mpich-3.4.2/lmp_20211104";#not workable, you need to modify this in slurm batch and partition
+$system_setting{lmp_exe} = "/opt/lammps-mpich-3.4.2/lmp_20220302";#not workable, you need to modify this in slurm batch and partition
 $system_setting{partition} = "debug";#for slurm sbatch file
 $system_setting{main_dir} = $mainPath;
 $system_setting{script_dir} = $currentPath;
@@ -43,7 +43,7 @@ $system_setting{T_incNo} = 2;#total increment number from T_lo to T_hi,
 $system_setting{T_No} = 1;#how many temperatures you want to consider within a temperature range
 
 my %dptrain_setting; 
-$dptrain_setting{type_map} = [("N")];# json template file
+$dptrain_setting{type_map} = [("Ag")];# json template file
 $dptrain_setting{json_script} = "$currentPath/template.json";# json template file
 $dptrain_setting{json_outdir} = "$mainPath/dp_train";
 $dptrain_setting{working_dir} = "$mainPath/dp_train";
@@ -58,8 +58,8 @@ $dptrain_setting{save_freq} = 1000;
 $dptrain_setting{start_lr} = 0.001;
 my $temp =$dptrain_setting{start_lr} * 0.95**( $dptrain_setting{trainstep}/$dptrain_setting{decay_steps} );
 $dptrain_setting{start_lr4compress} = $temp;
-$dptrain_setting{rcut} = 6.000000000001;
-$dptrain_setting{rcut_smth} = 5.00000001;
+$dptrain_setting{rcut} = 8.00000000000001;
+$dptrain_setting{rcut_smth} = 2.0000000001;
 $dptrain_setting{descriptor_type} = "se_e2_a";
 $dptrain_setting{save_ckpt} = "model.ckpt";
 $dptrain_setting{save_ckpt4compress} = "model_compress.ckpt";
@@ -74,16 +74,16 @@ my %npy_setting;# most by dynamical setting
 #lmp setting
 my %lmp_setting;#from main
 
-$lmp_setting{masses}  = [(14.0067)];#masses for lmp script
+$lmp_setting{masses}  = [(107.8682)];#masses for lmp script
 $lmp_setting{ori_lmp_script}  = "$mainPath/scripts/lmp_script.in";#lmp script template, the same folder as this perl
 $lmp_setting{ori_slurm_script}  = "$mainPath/scripts/slurm_lmp.sh";#slurm script template
 $lmp_setting{lmp_working_dir}  = "$mainPath/lmp_label";#folder for all lmp jobs
 $lmp_setting{lmp_graph_dir}  = "$mainPath/dp_train";#folder for all lmp jobs
-$lmp_setting{maxlabel}  = 10;#max number for labeling data files
+$lmp_setting{maxlabel}  = 15;#max number for labeling data files
 $lmp_setting{upper_bound}  = 0.5;#if dft has convergence problem, decrease it.
 $lmp_setting{lower_bound}  = 0.01;#lower bound for labelling. smaller value,0.01, for fewer initial structures
 $lmp_setting{out_freq}  = 500;#data file and deviation output freq
-$lmp_setting{ts}  = 0.005;#timestep size for unit metal
+$lmp_setting{ts}  = 0.001;#timestep size for unit metal
 
 my %scf_setting;
 
