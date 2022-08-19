@@ -35,6 +35,35 @@ my %scf_setting = %{$scf_setting_hr};
 my $jobtype = $system_setting{jobtype};
 my $currentPath = $system_setting{script_dir};
 my $mainPath = $system_setting{main_dir};# main path of dpgen folder
+#check all QE input file setting
+my @ref_QE = `egrep "etot_conv_thr|forc_conv_thr|pseudo_dir|ecutwfc|ecutrho" $currentPath/QE_script.in`;
+chomp @ref_QE;
+my %QE_keyRef;
+for (@ref_QE){
+    s/^\s+|\s+$//;#remove beginnig and end empty space
+    /(\w+)\s*=\s*(.+)/;
+    chomp($1,$2);
+    $QE_keyRef{$1}=$2;
+}
+
+my @QE_in = `find $mainPath/initial -type f -name "*.in"`;#all QE input
+chomp @QE_in;
+for my $in (@QE_in){
+    my @temp = `egrep "etot_conv_thr|forc_conv_thr|pseudo_dir|ecutwfc|ecutrho" $in`;
+        for (@temp){
+            s/^\s+|\s+$//;#remove beginnig and end empty space
+            /(\w+)\s*=\s*(.+)/;
+            chomp($1,$2);
+            if($QE_keyRef{$1} ne $2){
+                print "the setting for $1 is different in ".
+                "./scripts/QE_script.in (currently for $QE_keyRef{$1}) and $in (currently for $2).\n";
+                print "\n***** You must use the same settings for etot_conv_thr, forc_conv_thr, pseudo_dir, ecutwfc, ecutrho ".
+                "in each QE input file (also in ./scripts/QE_script.in). Otherwise, your dptrain result could be not good!\n";
+                die;
+            }
+        }
+}
+
 
 #if($onlyfinal_dptrain eq "yes") {goto final_dptrain;}
 #make all required folders and slurm files

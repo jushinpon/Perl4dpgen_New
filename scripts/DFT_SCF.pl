@@ -102,9 +102,9 @@ for my $dir (@labelled_dir){
         for (1..@used_element){
           `sed -i '/nspin = 2/a starting_magnetization($_) =  2.00000e-01' $dftscript`;
         } 
-        ### cutoff ###
-        `sed -i 's:^ecutwfc.*:ecutwfc = $cutoff[-1]:' $dftscript`;
-        `sed -i 's:^ecutrho.*:ecutrho = $rho_cutoff[-1]:' $dftscript`;    
+        ### cutoff ### (not modify them dynamically)
+        #`sed -i 's:^ecutwfc.*:ecutwfc = $cutoff[-1]:' $dftscript`;
+        #`sed -i 's:^ecutrho.*:ecutrho = $rho_cutoff[-1]:' $dftscript`;    
         ###type###
         `sed -i 's:^ntyp.*:ntyp = $ntype:' $dftscript`;    
         ###atoms###        
