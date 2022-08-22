@@ -15,13 +15,13 @@ chdir("..");
 my $mainPath = getcwd();# main path of Perl4dpgen dir
 chdir("$currentPath");
 my $NVT4str = "no";
-my @allNVTstru = ("Ag_mp-10597","Ag_mp-8566","Ag_mp-989737","Opt-Afcc-Ag","Scf-Afcc-Ag");#("bcc_bulk");#,"fcc_bulk","hcp_bulk");for surface
+my @allNVTstru = ("Ag_mp-10597","Ag_mp-8566","Ag_mp-989737","scf-Afcc-Ag");#("bcc_bulk");#,"fcc_bulk","hcp_bulk");for surface
 # should have the same names as in the initial folder
 my $NPT4str = "yes";
-my @allNPTstru = ("Ag_mp-10597","Ag_mp-8566","Ag_mp-989737","Opt-Afcc-Ag","Scf-Afcc-Ag");
+my @allNPTstru = ("Ag_mp-10597","Ag_mp-8566","Ag_mp-989737","scf-Afcc-Ag");
 my @allPress = (1,10000);#unit:bar,the pressures your want to use for labelling
 my @allStep = (3000,6000);#time step number, should be larger than 500 (default output_freq)
-my @allIniStr =  ("Ag_mp-10597","Ag_mp-8566","Ag_mp-989737","Opt-Afcc-Ag","Scf-Afcc-Ag");#for the fisrt dp train,should include all structures for labeling
+my @allIniStr =  ("Ag_mp-10597","Ag_mp-8566","Ag_mp-989737","scf-Afcc-Ag");#for the fisrt dp train,should include all structures for labeling
 #"bcc_bulk",
 my %system_setting;
 $system_setting{jobtype} = "new";#"new";#check readme
@@ -34,7 +34,7 @@ $system_setting{partition} = "debug";#for slurm sbatch file
 $system_setting{main_dir} = $mainPath;
 $system_setting{script_dir} = $currentPath;
 #$system_setting{mpi_dir} = #modify in the future
-$system_setting{trainNo} = 4;# training number at a time
+$system_setting{trainNo} = 3;# training number at a time
 $system_setting{iter} = 0;
 $system_setting{T_hi} = 2000;#the higest temperature for lammps
 $system_setting{T_lo} = 300;#the lowest temperature for lammps
