@@ -2,8 +2,8 @@
 calculation = "scf"
 disk_io = 'none'
 pseudo_dir = '/opt/QEpot/SSSP_efficiency_pseudos/'
-  etot_conv_thr =   1.6000000000d-04
-  forc_conv_thr =   1.0000000000d-04
+etot_conv_thr =   1.6000000000d-04
+forc_conv_thr =   1.0000000000d-04
 tprnfor = .true.
 tstress = .true.
 verbosity = 'high'
@@ -16,9 +16,9 @@ nat = 2
 smearing = "gaussian"
 ntyp = 1
 ibrav = 0
-  degauss =   2.2049585400d-02
-  ecutrho =   7.8000000000d+02
-  ecutwfc =   6.5000000000d+01
+degauss =   2.2049585400d-02
+ecutrho =   7.8000000000d+02
+ecutwfc =   6.5000000000d+01
 !systemend
 /
 

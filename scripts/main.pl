@@ -38,12 +38,27 @@ my $mainPath = $system_setting{main_dir};# main path of dpgen folder
 #check all QE input file setting
 my @ref_QE = `egrep "etot_conv_thr|forc_conv_thr|pseudo_dir|ecutwfc|ecutrho" $currentPath/QE_script.in`;
 chomp @ref_QE;
-my %QE_keyRef;
+my %QE_keyRef;#make numeric values
+my %QE_keyRefOri;#original string format for double precision
 for (@ref_QE){
     s/^\s+|\s+$//;#remove beginnig and end empty space
     /(\w+)\s*=\s*(.+)/;
     chomp($1,$2);
-    $QE_keyRef{$1}=$2;
+    my $tmpkey = $1;
+    my $tmpval = $2;
+    if($tmpkey eq "pseudo_dir"){
+        $QE_keyRef{$tmpkey}=$tmpval;
+    }
+    else{
+        unless($tmpval =~/d/){
+            die "*You must use the format of ".
+            "double precision for $tmpkey in $currentPath/QE_script.in".
+            "For a double precision example, 1.600d-04\n";
+        };
+        $tmpval =~/(.*)d([+|-].*)/;
+        $QE_keyRef{$tmpkey}= $1*10**$2;
+        $QE_keyRefOri{$tmpkey}= $tmpval;
+    }
 }
 
 my @QE_in = `find $mainPath/initial -type f -name "*.in"`;#all QE input
@@ -54,16 +69,46 @@ for my $in (@QE_in){
             s/^\s+|\s+$//;#remove beginnig and end empty space
             /(\w+)\s*=\s*(.+)/;
             chomp($1,$2);
-            if($QE_keyRef{$1} ne $2){
-                print "the setting for $1 is different in ".
-                "./scripts/QE_script.in (currently for $QE_keyRef{$1}) and $in (currently for $2).\n";
+            my $tmpkey = $1;
+            my $tmpval = $2;
+            #    print "###123, $tmpkey, $tmpval\n";
+            if($tmpkey ne "pseudo_dir"){
+                 unless($tmpval =~/d/){
+                    die "*You must use the format of ".
+                    "double precision for $tmpkey in $in".
+                    "For a double precision example, 1.600d-04\n";
+                  };
+                $tmpval =~/(.*)d([+|-].*)/;
+                my $temp = $1*10**$2;
+                if($QE_keyRef{$tmpkey} != $temp){
+                    #print "123, $tmpkey, $tmpval\n";
+                    #print "\$QE_keyRef{$tmpkey}, $QE_keyRef{$tmpkey}\n \n";
+                    my $temp1 = $QE_keyRefOri{$tmpkey};
+                    my $temp2 = $tmpval;
+                    chomp ($temp1,$temp2);
+                    print "###$tmpkey setting: $temp1,$temp2####\n";
+                    print "In $currentPath/QE_script.in and $in\n";
+                    print "AND\n";
+                    print "In $in\n";
+                    print "ARE DIFFERENT!!!!\n";
+                    
+                    print "\n***** You must use the same settings for etot_conv_thr, forc_conv_thr, pseudo_dir, ecutwfc, ecutrho ".
+                    "in each QE input file (also in $currentPath/QE_script.in). Otherwise, your dptrain result could be not good!\n";
+                    die;
+                }
+            }
+            elsif($tmpkey eq "pseudo_dir" and $QE_keyRef{$tmpkey} ne $tmpval){
+                #print "123, $tmpkey, $tmpval\n";
+                #print "\$QE_keyRef{$tmpkey}, $QE_keyRef{$tmpkey}\n \n";
+                print "The setting for $tmpkey is different in ".
+                "$currentPath/QE_script.in (currently for $QE_keyRef{$tmpkey})\n";
+                print "and in $in (currently for $tmpval).\n";
                 print "\n***** You must use the same settings for etot_conv_thr, forc_conv_thr, pseudo_dir, ecutwfc, ecutrho ".
-                "in each QE input file (also in ./scripts/QE_script.in). Otherwise, your dptrain result could be not good!\n";
+                "in each QE input file (also in $currentPath/QE_script.in). Otherwise, your dptrain result could be not good!\n";
                 die;
             }
         }
 }
-
 
 #if($onlyfinal_dptrain eq "yes") {goto final_dptrain;}
 #make all required folders and slurm files
