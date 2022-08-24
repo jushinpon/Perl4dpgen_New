@@ -28,8 +28,8 @@ variable atomnumber equal atoms
 shell mkdir ${folder}
 
 read_data OPT-Mo.data #
-if "${atomnumber} == 1" then &
-"replicate 2 2 2" &
+#if "${atomnumber} == 1" then &
+#"replicate 2 2 2" &
 
 #change box length (0.95~1.05)
 variable xscale equal 1.0+(2.0*v_rn-1.0)*0.05

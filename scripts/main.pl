@@ -64,6 +64,16 @@ for (@ref_QE){
 my @QE_in = `find $mainPath/initial -type f -name "*.in"`;#all QE input
 chomp @QE_in;
 for my $in (@QE_in){
+    my $natom = `egrep nat $in`;#check atom number in QE input. atom number <=1 is not allowed
+    chomp $natom;
+    $natom =~ s/^\s+|\s+$//;#remove beginnig and end empty space
+    $natom =~ /(\w+)\s*=\s*(.+)/;
+    chomp ($1,$2);
+    if($2 <= 1){
+        print"\n***1. Atom number (currently, nat = $2) in $in is not allowed. The nat value should be larger than 1.\n";
+        print"###2. Please modify your current system to have at least 2 atoms and conduct the QE calculation again.\n\n";
+        die;    
+    }   
     my @temp = `egrep "etot_conv_thr|forc_conv_thr|pseudo_dir|ecutwfc|ecutrho" $in`;
         for (@temp){
             s/^\s+|\s+$//;#remove beginnig and end empty space
@@ -74,7 +84,7 @@ for my $in (@QE_in){
             #    print "###123, $tmpkey, $tmpval\n";
             if($tmpkey ne "pseudo_dir"){
                  unless($tmpval =~/d/){
-                    die "*You must use the format of ".
+                    die "\n*You must use the format of ".
                     "double precision for $tmpkey in $in".
                     "For a double precision example, 1.600d-04\n";
                   };
@@ -86,7 +96,7 @@ for my $in (@QE_in){
                     my $temp1 = $QE_keyRefOri{$tmpkey};
                     my $temp2 = $tmpval;
                     chomp ($temp1,$temp2);
-                    print "###$tmpkey setting: $temp1,$temp2####\n";
+                    print "\n###$tmpkey setting: $temp1,$temp2####\n";
                     print "In $currentPath/QE_script.in and $in\n";
                     print "AND\n";
                     print "In $in\n";
