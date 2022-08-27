@@ -4,7 +4,7 @@
 #SBATCH --job-name=dp01
 ##SBATCH --nodes=1
 ##SBATCH --ntasks-per-node=8
-#SBATCH --partition=dp_gp5_24C
+#SBATCH --partition=debug
 ##SBATCH --reservation=GPU_test
 ##SBATCH --exclude=node18,node20
 #SBATCH --gres=gpu:0 
