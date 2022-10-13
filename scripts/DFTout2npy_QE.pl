@@ -5,7 +5,7 @@ Usage: perl DFTout2npy.pl
 This script is for QE only
 For vc-md: viral with momentum contribution cannot be used for virial.npy, so dropped
 For scf:
-For vc-relax: only the last energy, forces, virial can be used. 
+For vc-relax (relax): only the last energy, forces, virial can be used. 
 !    total energy 
 unit-cell volume
 =cut
@@ -129,13 +129,13 @@ for my $id (0..$#out){
 	my @all = <$all>;
 	close($all);
 
-	if ($cal_type eq "vc-relax"){
+	if ($cal_type eq "vc-relax" or $cal_type eq "relax"){
 		my @temp = grep m/End of BFGS Geometry Optimization/, @all;
 		chomp @temp;
 		$temp[0] =~ s/^\s+|\s+$//; 
 		print "Current calculation type: $cal_type, keyword: \"$temp[0]\" \n";
-		die "The vc-relax in $out[$id] hasn't been done (no 'End of BFGS Geometry Optimization')! no data can be used for npy files.
-	You need to do vc-relax with a larger nstep value or drop this case by modifying all_setting.pm!\n" unless (@temp);
+		die "The vc-relax (or relax) in $out[$id] hasn't been done (no 'End of BFGS Geometry Optimization')! no data can be used for npy files.
+	You need to do vc-relax (or relax) with a larger nstep value or drop this case by modifying all_setting.pm!\n" unless (@temp);
 	}
 	else{
 		print "Current calculation type: $cal_type\n";
@@ -154,13 +154,13 @@ for my $id (0..$#out){
 	#for (1..@eraw){my $id = $_ -1; print "$id $eraw[$id]\n";}
 
 # get system volume for virial (in unit of eV)
-# new unit-cell volume =   1707.20246 a.u.^3 (   252.98130 Ang^3 )	
-# 0 for scf
+# new unit-cell volume =   1707.20246 a.u.^3 (   252.98130 Ang^3 )	only for vc-relax
+# 0 for scf and relax, mainly for vc-relax and vc-md
 	my @newcellVol = grep {if(m/^\s+new unit-cell volume.+\(\s+(.+)\s+Ang\^3\s+\)/){$_ = $1;}} @all;
     chomp @newcellVol;
 
 # unit-cell volume =   1707.20246 a.u.^3
-# 1 for scf and md, 2 for vc-relax (if done)  	
+# 1 for scf, relax, and md, 2 for vc-relax (if done)  	
 	my @cellVol = grep {if(m/^\s+unit-cell volume\s+=\s+(.+)\s+\(a.u.\)\^3/){$_=$1*$bohr2ang3;}} @all;
     chomp @cellVol;
 	
@@ -186,19 +186,23 @@ You need to do vc-relax, scf or drop this case by modifying all_setting.pm!\n" i
 	#for (0..$#totalstress){print "$_,$totalstress[$_]\n"; }
 	
 	my $vol_counter = 0;
-	for(@totalstress){
+	for (@totalstress){#for scf, only 3 items. For vc-relax or relax, could be more than 3
 	  my $temp = int ($vol_counter/3);
 		if(m/^\s+[-+]?\d+\.?\d+\s+[-+]?\d+\.?\d+\s+[-+]?\d+\.?\d+\s+([-+]?\d+\.?\d+)\s+([-+]?\d+\.?\d+)\s+([-+]?\d+\.?\d+)/){
-			if($temp == 0){
-				push @virial, [$1*$kbar2evperang3*$cellVol[$temp],$2*$kbar2evperang3*$cellVol[$temp],$3*$kbar2evperang3*$cellVol[$temp]];
+			if($temp == 0 or $cal_type eq "relax"){#for relax and scf, only $cellVol[0] exists, which comes from in file 
+			    #For vc-relax and vc-md, @cellVol keeps the initial volume value (the same as in file)
+				
+				push @virial, [$1*$kbar2evperang3*$cellVol[0],$2*$kbar2evperang3*$cellVol[0],$3*$kbar2evperang3*$cellVol[0]];
 	  			$vol_counter++;
 			}
 			else{
 				push @virial, [$1*$kbar2evperang3*$newcellVol[$temp - 1],$2*$kbar2evperang3*$newcellVol[$temp - 1],$3*$kbar2evperang3*$newcellVol[$temp - 1]];
 				$vol_counter++;
 			}  
+			
 	  }
 	}
+
 	die "no virial was found in $out[$id]\n" unless (@virial);
     my $virtalNo = @virial/3;
 	die "virial set number is not equal to energy number in $out[$id]\n" if ($energyNo != $virtalNo);
@@ -292,9 +296,11 @@ You need to do vc-relax, scf or drop this case by modifying all_setting.pm!\n" i
 	}    
     die "no cell vector was found in $out[$id]\n" unless (@cell);
     my $cellNo = @cell/3;
-	#MD has one more 
-	die "cell vector set number $cellNo is fewer than the energy number $energyNo in $out[$id]\n" if ($energyNo > $cellNo);
-
+	#MD has one more
+	if($cal_type ne "relax"){#for relax, only cell information can be found in QE in file 
+		die "cell vector set number $cellNo is fewer than the energy number $energyNo in $out[$id]\n" if ($energyNo > $cellNo);
+	}
+	
 	for my $idc (1..@cell/3){#@virial has three elements
 		my $temp = ($idc -1) * 3;
 		chomp (@{$cell[$temp]}[0..2],@{$cell[$temp + 1]}[0..2],@{$cell[$temp + 2]}[0..2]);
@@ -316,7 +322,7 @@ for my $f (@npy){
 	open my $t ,">$filepath";
     my @raw = @{ $raw_ref{$f} };
 	#print "\n***$f\n";
-	if ($cal_type eq "vc-relax"){#ONLY NEED THE LAST ONES
+	if ($cal_type eq "vc-relax" or $cal_type eq "relax"){#ONLY NEED THE LAST ONES
 		
 			my $r = $raw[-1];
 			if ($f eq "energy"){

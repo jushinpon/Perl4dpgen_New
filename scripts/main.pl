@@ -261,7 +261,7 @@ for my $iter ($begIter..$#iteration){
     my @scfdone;#with "! total energy" in sout file
     my %strFolders;#scf-done folder information of a structure in different folders (different thermostates by dft scf)
     for my $folder (@strFoldersThermo){
-        my $temp = `grep ! $folder/*.sout`;#only one sout file
+        my $temp = `grep "JOB DONE" $folder/*.sout`;#only one sout file
         if($temp){#with ! totoal energy (scf done)
             #$folder: ../DFT_output/T2000-P0-R3000-Al-12345/lmp_1500
             $folder =~ /.+T\d+-P\d+-R\d+-(.+)\/.+/;#structure in initial folder
