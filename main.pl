@@ -21,7 +21,7 @@ require './lmp_label.pl';
 require './dp_train.pl';
 require './matplot.pl';
 #my $onlyfinal_dptrain = "no";#yes or no (not work currently)
-my $initial_trainOnly = "yes";#if "yes", only conduct the initial training
+my $initial_trainOnly = "no";#if "yes", only conduct the initial training
 my $forkNo = 1;#modify in the future
 my $pm = Parallel::ForkManager->new("$forkNo");
 #load all settings first
@@ -35,11 +35,7 @@ my %scf_setting = %{$scf_setting_hr};
 my $jobtype = $system_setting{jobtype};
 my $currentPath = $system_setting{script_dir};
 my $mainPath = $system_setting{main_dir};# main path of dpgen folder
-<<<<<<< HEAD:main.pl
 my $useFormationEnergy = $system_setting{useFormationEnergy};
-
-=======
->>>>>>> 3bf398b8e144624bd180c2c273815a472603cc2c:scripts/main.pl
 #check all QE input file setting
 my @ref_QE = `egrep "etot_conv_thr|forc_conv_thr|pseudo_dir|ecutwfc|ecutrho" $currentPath/QE_script.in`;
 chomp @ref_QE;
