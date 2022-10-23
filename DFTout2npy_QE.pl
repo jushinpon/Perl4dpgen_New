@@ -5,7 +5,7 @@ Usage: perl DFTout2npy.pl
 This script is for QE only
 For vc-md: viral with momentum contribution cannot be used for virial.npy, so dropped
 For scf:
-For vc-relax: only the last energy, forces, virial can be used. 
+For vc-relax (relax): only the last energy, forces, virial can be used. 
 !    total energy 
 unit-cell volume
 =cut
@@ -20,7 +20,7 @@ sub DFTout2npy_QE{
 my ($ss_hr,$npy_hr) = @_;#recive hash reference for setting
 my $mainPath = $ss_hr->{main_dir};# main path of dpgen folder
 my $currentPath = $ss_hr->{script_dir};
-
+my $useFormationEnergy = $ss_hr->{useFormationEnergy};
 my $dftBE_all = $npy_hr->{dftBE};
 my $expBE_be = $npy_hr->{expBE};
 my $npyout_dir =$npy_hr->{npyout_dir};#store raw and set folders
@@ -129,13 +129,13 @@ for my $id (0..$#out){
 	my @all = <$all>;
 	close($all);
 
-	if ($cal_type eq "vc-relax"){
+	if ($cal_type eq "vc-relax" or $cal_type eq "relax"){
 		my @temp = grep m/End of BFGS Geometry Optimization/, @all;
 		chomp @temp;
 		$temp[0] =~ s/^\s+|\s+$//; 
 		print "Current calculation type: $cal_type, keyword: \"$temp[0]\" \n";
-		die "The vc-relax in $out[$id] hasn't been done (no 'End of BFGS Geometry Optimization')! no data can be used for npy files.
-	You need to do vc-relax with a larger nstep value or drop this case by modifying all_setting.pm!\n" unless (@temp);
+		die "The vc-relax (or relax) in $out[$id] hasn't been done (no 'End of BFGS Geometry Optimization')! no data can be used for npy files.
+	You need to do vc-relax (or relax) with a larger nstep value or drop this case by modifying all_setting.pm!\n" unless (@temp);
 	}
 	else{
 		print "Current calculation type: $cal_type\n";
@@ -143,8 +143,17 @@ for my $id (0..$#out){
 ################# energy ############
 ##!    total energy              =    (-158.01049803) Ry
 #the first energy corresponds to the structure in input file
-	my @totalenergy = grep {if(m/^\s*!\s*total energy\s*=\s*([-+]?\d*\.?\d*)/){$_ = $1*$ry2eV - $dftBE_all + $expBE_be;}} @all;
-    #my	$lmpE = (($totE - $sumDFTatomE) + $sumLMPatomE) / $atomnumber; #use in MS perl
+	my @totalenergy;
+	if($useFormationEnergy eq "yes"){
+		@totalenergy = grep {if(m/^\s*!\s*total energy\s*=\s*([-+]?\d*\.?\d*)/){
+		$_ = $1*$ry2eV - $dftBE_all + $expBE_be;}} @all;
+	}
+	else{
+		@totalenergy = grep {if(m/^\s*!\s*total energy\s*=\s*([-+]?\d*\.?\d*)/){
+		$_ = $1*$ry2eV;}} @all;
+	}
+
+	#my	$lmpE = (($totE - $sumDFTatomE) + $sumLMPatomE) / $atomnumber; #use in MS perl
     unless (@totalenergy){
 		print "no total energy was found in $out[$id] or dft calculation failed!!\n";
 	    return
@@ -154,7 +163,7 @@ for my $id (0..$#out){
 	#for (1..@eraw){my $id = $_ -1; print "$id $eraw[$id]\n";}
 
 # get system volume for virial (in unit of eV)
-# new unit-cell volume =   1707.20246 a.u.^3 (   252.98130 Ang^3 )	
+# new unit-cell volume =   1707.20246 a.u.^3 (   252.98130 Ang^3 )	only for vc-relax
 # 0 for scf and relax, mainly for vc-relax and vc-md
 	my @newcellVol = grep {if(m/^\s+new unit-cell volume.+\(\s+(.+)\s+Ang\^3\s+\)/){$_ = $1;}} @all;
     chomp @newcellVol;
@@ -185,24 +194,24 @@ You need to do vc-relax, scf or drop this case by modifying all_setting.pm!\n" i
 	my @virial;
 	#for (0..$#totalstress){print "$_,$totalstress[$_]\n"; }
 	
-	my $vol_counter = 0;#virial = vol* stress. stresses of a frame distributes in three rows 
-	for(@totalstress){
-	  my $temp = int ($vol_counter/3);#counter for using @newcellVol when vc-relax or vc-md
+	my $vol_counter = 0;
+	for (@totalstress){#for scf, only 3 items. For vc-relax or relax, could be more than 3
+	  my $temp = int ($vol_counter/3);
 		if(m/^\s+[-+]?\d+\.?\d+\s+[-+]?\d+\.?\d+\s+[-+]?\d+\.?\d+\s+([-+]?\d+\.?\d+)\s+([-+]?\d+\.?\d+)\s+([-+]?\d+\.?\d+)/){
-			if($temp == 0 or $cal_type eq "relax"){#scf, relax, md only has @cellVol,@newcellVol is undefined
+			if($temp == 0 or $cal_type eq "relax"){#for relax and scf, only $cellVol[0] exists, which comes from in file 
 			    #For vc-relax and vc-md, @cellVol keeps the initial volume value (the same as in file)
-				#print "test: $1,$cellVol[0]\n";
 				
 				push @virial, [$1*$kbar2evperang3*$cellVol[0],$2*$kbar2evperang3*$cellVol[0],$3*$kbar2evperang3*$cellVol[0]];
 	  			$vol_counter++;
 			}
 			else{
-				#print "test: $1,$newcellVol[$temp - 1]\n";
 				push @virial, [$1*$kbar2evperang3*$newcellVol[$temp - 1],$2*$kbar2evperang3*$newcellVol[$temp - 1],$3*$kbar2evperang3*$newcellVol[$temp - 1]];
 				$vol_counter++;
 			}  
+			
 	  }
 	}
+
 	die "no virial was found in $out[$id]\n" unless (@virial);
     my $virtalNo = @virial/3;
 	die "virial set number is not equal to energy number in $out[$id]\n" if ($energyNo != $virtalNo);
@@ -300,6 +309,7 @@ You need to do vc-relax, scf or drop this case by modifying all_setting.pm!\n" i
 	if($cal_type ne "relax"){#for relax, only cell information can be found in QE in file 
 		die "cell vector set number $cellNo is fewer than the energy number $energyNo in $out[$id]\n" if ($energyNo > $cellNo);
 	}
+	
 	for my $idc (1..@cell/3){#@virial has three elements
 		my $temp = ($idc -1) * 3;
 		chomp (@{$cell[$temp]}[0..2],@{$cell[$temp + 1]}[0..2],@{$cell[$temp + 2]}[0..2]);

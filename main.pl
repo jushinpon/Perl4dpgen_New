@@ -21,7 +21,7 @@ require './lmp_label.pl';
 require './dp_train.pl';
 require './matplot.pl';
 #my $onlyfinal_dptrain = "no";#yes or no (not work currently)
-
+my $initial_trainOnly = "yes";#if "yes", only conduct the initial training
 my $forkNo = 1;#modify in the future
 my $pm = Parallel::ForkManager->new("$forkNo");
 #load all settings first
@@ -35,6 +35,92 @@ my %scf_setting = %{$scf_setting_hr};
 my $jobtype = $system_setting{jobtype};
 my $currentPath = $system_setting{script_dir};
 my $mainPath = $system_setting{main_dir};# main path of dpgen folder
+my $useFormationEnergy = $system_setting{useFormationEnergy};
+
+#check all QE input file setting
+my @ref_QE = `egrep "etot_conv_thr|forc_conv_thr|pseudo_dir|ecutwfc|ecutrho" $currentPath/QE_script.in`;
+chomp @ref_QE;
+my %QE_keyRef;#make numeric values
+my %QE_keyRefOri;#original string format for double precision
+for (@ref_QE){
+    s/^\s+|\s+$//;#remove beginnig and end empty space
+    /(\w+)\s*=\s*(.+)/;
+    chomp($1,$2);
+    my $tmpkey = $1;
+    my $tmpval = $2;
+    if($tmpkey eq "pseudo_dir"){
+        $QE_keyRef{$tmpkey}=$tmpval;
+    }
+    else{
+        unless($tmpval =~/d/){
+            die "*You must use the format of ".
+            "double precision for $tmpkey in $currentPath/QE_script.in".
+            "For a double precision example, 1.600d-04\n";
+        };
+        $tmpval =~/(.*)d([+|-].*)/;
+        $QE_keyRef{$tmpkey}= $1*10**$2;
+        $QE_keyRefOri{$tmpkey}= $tmpval;
+    }
+}
+
+my @QE_in = `find $mainPath/initial -type f -name "*.in"`;#all QE input
+chomp @QE_in;
+for my $in (@QE_in){
+    my $natom = `egrep nat $in`;#check atom number in QE input. atom number <=1 is not allowed
+    chomp $natom;
+    $natom =~ s/^\s+|\s+$//;#remove beginnig and end empty space
+    $natom =~ /(\w+)\s*=\s*(.+)/;
+    chomp ($1,$2);
+    if($2 <= 1){
+        print"\n***1. Atom number (currently, nat = $2) in $in is not allowed. The nat value should be larger than 1.\n";
+        print"###2. Please modify your current system to have at least 2 atoms and conduct the QE calculation again.\n\n";
+        die;    
+    }   
+    my @temp = `egrep "etot_conv_thr|forc_conv_thr|pseudo_dir|ecutwfc|ecutrho" $in`;
+        for (@temp){
+            s/^\s+|\s+$//;#remove beginnig and end empty space
+            /(\w+)\s*=\s*(.+)/;
+            chomp($1,$2);
+            my $tmpkey = $1;
+            my $tmpval = $2;
+            #    print "###123, $tmpkey, $tmpval\n";
+            if($tmpkey ne "pseudo_dir"){
+                 unless($tmpval =~/d/){
+                    die "\n*You must use the format of ".
+                    "double precision for $tmpkey in $in".
+                    "For a double precision example, 1.600d-04\n";
+                  };
+                $tmpval =~/(.*)d([+|-].*)/;
+                my $temp = $1*10**$2;
+                if($QE_keyRef{$tmpkey} != $temp){
+                    #print "123, $tmpkey, $tmpval\n";
+                    #print "\$QE_keyRef{$tmpkey}, $QE_keyRef{$tmpkey}\n \n";
+                    my $temp1 = $QE_keyRefOri{$tmpkey};
+                    my $temp2 = $tmpval;
+                    chomp ($temp1,$temp2);
+                    print "\n###$tmpkey setting: $temp1,$temp2####\n";
+                    print "In $currentPath/QE_script.in and $in\n";
+                    print "AND\n";
+                    print "In $in\n";
+                    print "ARE DIFFERENT!!!!\n";
+                    
+                    print "\n***** You must use the same settings for etot_conv_thr, forc_conv_thr, pseudo_dir, ecutwfc, ecutrho ".
+                    "in each QE input file (also in $currentPath/QE_script.in). Otherwise, your dptrain result could be not good!\n";
+                    die;
+                }
+            }
+            elsif($tmpkey eq "pseudo_dir" and $QE_keyRef{$tmpkey} ne $tmpval){
+                #print "123, $tmpkey, $tmpval\n";
+                #print "\$QE_keyRef{$tmpkey}, $QE_keyRef{$tmpkey}\n \n";
+                print "The setting for $tmpkey is different in ".
+                "$currentPath/QE_script.in (currently for $QE_keyRef{$tmpkey})\n";
+                print "and in $in (currently for $tmpval).\n";
+                print "\n***** You must use the same settings for etot_conv_thr, forc_conv_thr, pseudo_dir, ecutwfc, ecutrho ".
+                "in each QE input file (also in $currentPath/QE_script.in). Otherwise, your dptrain result could be not good!\n";
+                die;
+            }
+        }
+}
 
 #if($onlyfinal_dptrain eq "yes") {goto final_dptrain;}
 #make all required folders and slurm files
@@ -82,13 +168,19 @@ if($jobtype eq "new"){# a brand new dpgen job. No previous labeled npy files exi
              #density (g/cm3), arrangement, mass, lat a , lat c
             @{$used_element{$_}} = &elements::eleObj("$_");
         }    
-    
-        my @BE_all = `cat $npy_setting{inistr_dir}/dpE2expE.dat|grep -v "#"|awk '{print \$3}'`;
-        die "no dpE2expE.dat in $npy_setting{inistr_dir}\n" unless (@BE_all);
-        chomp @BE_all;
-        $npy_setting{dftBE} = $BE_all[0];#summation of dft binding energies of all atoms
-        $npy_setting{expBE} = $BE_all[1];#summation of exp binding energies of all atoms
-        &DFTout2npy_QE(\%system_setting,\%npy_setting);#send settings for getting npy
+        if($useFormationEnergy eq "yes"){
+            my @BE_all = `cat $npy_setting{inistr_dir}/dpE2expE.dat|grep -v "#"|awk '{print \$3}'`;
+            die "no dpE2expE.dat in $npy_setting{inistr_dir}\n" unless (@BE_all);
+            chomp @BE_all;
+            $npy_setting{dftBE} = $BE_all[0];#summation of dft binding energies of all atoms
+            $npy_setting{expBE} = $BE_all[1];#summation of exp binding energies of all atoms
+            &DFTout2npy_QE(\%system_setting,\%npy_setting);#send settings for getting npy
+        }
+        else{
+            $npy_setting{dftBE} = 0.0;#not used
+            $npy_setting{expBE} = 0.0;#not used
+            &DFTout2npy_QE(\%system_setting,\%npy_setting);#send settings for getting npy
+        }
     }
 }
 elsif($jobtype eq "rerun"){# old npy files exist
@@ -125,7 +217,21 @@ else{
 
 # training on all npy files in all_npy* folders
 print "#***Doing initial deepMD training\n";
-my @extraFolders = `find $mainPath/all_npy* -maxdepth 2 -mindepth 2 -type d -name "*"`;#all npy files
+
+my @allnpys = `find $mainPath/all_npy*  -type f -name "*.npy"`;
+chomp @allnpys;
+my %allnpyfolders;
+for (@allnpys){
+    my $temp =  `dirname $_`;
+    chomp $temp;
+    my $temp1 =  `dirname $temp`;
+    chomp $temp1;
+    #print "$temp1\n";
+    $allnpyfolders{$temp1} = 1;
+}
+my @extraFolders = sort keys %allnpyfolders;
+
+#my @extraFolders = `find $mainPath/all_npy* -maxdepth 2 -mindepth 2 -type d -name "*"`;#all npy files
 chomp @extraFolders;
 die "no npy files in  $mainPath/all_npy* folders\n" unless(@extraFolders);
 #
@@ -149,6 +255,7 @@ print "making plots for checking training results before iteration loop\n";
 
 print "\n\n#****Main iteration begins****#\n";
 my $begIter = $system_setting{begIter};#assign correct beginning iteration number
+die "Only initial training is done! (\$initial_trainOnly = \"yes\")\n" if($initial_trainOnly eq "yes");
 
 for my $iter ($begIter..$#iteration){
     $system_setting{iter} = $iter;
@@ -177,7 +284,7 @@ for my $iter ($begIter..$#iteration){
     my @scfdone;#with "! total energy" in sout file
     my %strFolders;#scf-done folder information of a structure in different folders (different thermostates by dft scf)
     for my $folder (@strFoldersThermo){
-        my $temp = `grep ! $folder/*.sout`;#only one sout file
+        my $temp = `grep "JOB DONE" $folder/*.sout`;#only one sout file
         if($temp){#with ! totoal energy (scf done)
             #$folder: ../DFT_output/T2000-P0-R3000-Al-12345/lmp_1500
             $folder =~ /.+T\d+-P\d+-R\d+-(.+)\/.+/;#structure in initial folder
@@ -188,8 +295,9 @@ for my $iter ($begIter..$#iteration){
             print "#scf of sout file in $folder has problem!!!\n";
         }
     } 
-#collect all sout and in files for a structure for npy convertion    
+#collect all sout and in files for a structure for npy convertion (could no good sout files if all failed)   
     my @str = keys %strFolders;
+    
     for my $str (@str){
         `mkdir -p  $mainPath/DFT_output/$str`;#collect all dft in and sout files originated from the same initial structure
         my @temp = @{$strFolders{$str}};
@@ -214,7 +322,29 @@ for my $iter ($begIter..$#iteration){
         &DFTout2npy_QE(\%system_setting,\%npy_setting);
     }#str loop
 # training on the all npy files (all_npy*)->all_npy00,all_npy01 from previous dpgen process
-    my @extraFolders = `find $mainPath/all_npy* -maxdepth 2 -mindepth 2 -type d -name "*"`;
+    my @allnpys = `find $mainPath/all_npy*  -type f -name "*.npy"`;
+    chomp @allnpys;
+    my %allnpyfolders;
+    for (@allnpys){
+        my $temp =  `dirname $_`;
+        chomp $temp;
+        my $temp1 =  `dirname $temp`;
+        chomp $temp1;
+        #print "$temp1\n";
+        $allnpyfolders{$temp1} = 1;
+    }
+    my @extraFolders = sort keys %allnpyfolders;
+
+    #housekeeping 
+    my @tempfolders = `find $mainPath/all_npy* -maxdepth 2 -mindepth 2 -type d -name "*"`;
+    chomp @tempfolders;
+    for (@tempfolders){
+        unless(exists $allnpyfolders{$_}){
+            print "no npy files in $_\n";
+            `rm -rf $_`;
+        }
+    }
+    #my @extraFolders = `find $mainPath/all_npy* -maxdepth 2 -mindepth 2 -type d -name "*"`;
     chomp @extraFolders;
     print "#Doing dp train at iteration $iter\n\n";
     $dptrain_setting{allnpy_dir} = [@extraFolders];

@@ -6,6 +6,8 @@ use warnings;
 
 our (%element); # density (g/cm3), arrangement, mass, lat a , lat c
 
+#$element{"N"} = [1.251,"hcp",14.007,3.861,6.265]; 
+$element{"B"} = [2.46,"hcp",10.81,5.06,5.06]; 
 $element{"N"} = [1.251,"hcp",14.007,2.86653.861,6.265]; 
 
 sub eleObj {# return properties of an element

@@ -20,6 +20,7 @@ my $pm = Parallel::ForkManager->new("$forkNo");
 my $mainPath = $ss_hr->{main_dir};# main path of dpgen folder
 my $currentPath = $ss_hr->{script_dir};
 my $debug = $ss_hr->{debug};
+my $QE_pot_json = $ss_hr->{QE_pot_json};
 `rm -rf $mainPath/DFT_output/`;#remove all old files and folders
 my $dft_exe = $ss_hr->{dft_exe};#dft exe 
 
@@ -56,7 +57,7 @@ for my $dir (@labelled_dir){
     my $json;
     {
         local $/ = undef;
-        open my $fh, '<', '/opt/QEpot/SSSP_efficiency.json';
+        open my $fh, '<', $QE_pot_json;
         $json = <$fh>;
         close $fh;
     }
@@ -102,9 +103,9 @@ for my $dir (@labelled_dir){
         for (1..@used_element){
           `sed -i '/nspin = 2/a starting_magnetization($_) =  2.00000e-01' $dftscript`;
         } 
-        ### cutoff ###
-        `sed -i 's:^ecutwfc.*:ecutwfc = $cutoff[-1]:' $dftscript`;
-        `sed -i 's:^ecutrho.*:ecutrho = $rho_cutoff[-1]:' $dftscript`;    
+        ### cutoff ### (not modify them dynamically)
+        #`sed -i 's:^ecutwfc.*:ecutwfc = $cutoff[-1]:' $dftscript`;
+        #`sed -i 's:^ecutrho.*:ecutrho = $rho_cutoff[-1]:' $dftscript`;    
         ###type###
         `sed -i 's:^ntyp.*:ntyp = $ntype:' $dftscript`;    
         ###atoms###        

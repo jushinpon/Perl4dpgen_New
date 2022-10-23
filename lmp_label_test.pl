@@ -39,15 +39,15 @@ for my $case (0..$#thermostate){# loop over all cases in an iteration
 	if($ensemble == 1){#npt
         $boundary  = "p p p";
     }
-    else{#nvt, mainly for surface, need modify it in the future
-        $boundary  = "p p p";
+    else{#nvt, mainly for surface
+        $boundary  = "p p f";
     }
 # the following are further information for this iteration
     my $T = ${$thermostate[$case]}[1];
     my $P = ${$thermostate[$case]}[2];
     my $run_step = ${$thermostate[$case]}[3];
     my $str = ${$thermostate[$case]}[4];
-    print "#T: $T, P: $P, run_step:$run_step for structure: $str\n";
+    print "#T: $T,P: $P,run_step:$run_step for structure: $str\n";
 
     my $read_data = `ls $mainPath/initial/$str/*.data`;
     chomp $read_data;
@@ -65,10 +65,6 @@ for my $case (0..$#thermostate){# loop over all cases in an iteration
 	my $slurm_outscript = "$lmp_outdir/slurm_lmp.sh";#lmp slurm script
 
 #modify lmp script for each case
-
-    my $rand = ceil(1234567 * (rand() + $case*rand()));
-	chomp $rand;
-	`sed -i 's:variable seed_temp.*:variable seed_temp equal $rand:' $lmp_outscript`;
     `sed -i "s/boundary .*/boundary $boundary/" $lmp_outscript`;
     `sed -i "s/variable run_step .*/variable run_step equal $run_step/" $lmp_outscript`;
     `sed -i "s/variable out_freq .*/variable out_freq equal $out_freq/" $lmp_outscript`;
@@ -110,7 +106,7 @@ for my $case (0..$#thermostate){# loop over all cases in an iteration
     `sed -i '/#sed_anchor01/a #SBATCH --output=$job_folder.lmpout' $slurm_outscript`;
     # #modify script name
     `sed -i '/lmp .*/d' $slurm_outscript`;
-    `sed -i '/#mpiexec_anchor/a lmp -in lmp.in' $slurm_outscript`;
+    `sed -i '/#mpiexec_anchor/a mpiexec lmp -in lmp.in' $slurm_outscript`;
 
     chdir("$lmp_outdir");
     system("sbatch ./slurm_lmp.sh");

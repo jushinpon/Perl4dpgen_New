@@ -23,23 +23,25 @@ variable ts equal 0.02 # units metal for time: 1 ps, dpgen use 20 fs
 variable pdamp equal ${ts}*1000 
 variable tdamp equal ${ts}*100 
 variable seed equal 12345 # need to modify it by Perl 
+variable atomnumber equal atoms
 
 shell mkdir ${folder}
 
 read_data OPT-Mo.data #
+#if "${atomnumber} == 1" then &
+#"replicate 2 2 2" &
 
 #change box length (0.95~1.05)
-variable xscale equal 1.0+(2.0*v_rn-1.0)*0.02
-variable yscale equal 1.0+(2.0*v_rn-1.0)*0.02
-variable zscale equal 1.0+(2.0*v_rn-1.0)*0.02
+variable xscale equal 1.0+(2.0*v_rn-1.0)*0.05
+variable yscale equal 1.0+(2.0*v_rn-1.0)*0.05
+variable zscale equal 1.0+(2.0*v_rn-1.0)*0.05
 
 #change box shape (varies between -2% to +2% of original value)
 variable xy equal (1.0+(2.0*v_rn-1.0)*0.02)*xy
 variable xz equal (1.0+(2.0*v_rn-1.0)*0.02)*xz
 variable yz equal (1.0+(2.0*v_rn-1.0)*0.02)*yz
 
-change_box all x scale ${xscale} y scale ${yscale} z scale ${zscale} triclinic remap  units box
-#change_box all x scale ${xscale} y scale ${yscale} z scale ${zscale} xy final ${xy} xz final ${xz} yz final ${yz} triclinic remap  units box
+change_box all x scale ${xscale} y scale ${yscale} z scale ${zscale} xy final ${xy} xz final ${xz} yz final ${yz} triclinic remap  units box
 #perturb a little (maximum of 0.05 A for each atom)
 displace_atoms all random 0.05 0.05 0.05 ${seed_temp} units box
 
