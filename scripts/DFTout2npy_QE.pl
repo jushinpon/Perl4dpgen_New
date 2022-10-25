@@ -20,7 +20,7 @@ sub DFTout2npy_QE{
 my ($ss_hr,$npy_hr) = @_;#recive hash reference for setting
 my $mainPath = $ss_hr->{main_dir};# main path of dpgen folder
 my $currentPath = $ss_hr->{script_dir};
-
+my $useFormationEnergy = $ss_hr->{useFormationEnergy};
 my $dftBE_all = $npy_hr->{dftBE};
 my $expBE_be = $npy_hr->{expBE};
 my $npyout_dir =$npy_hr->{npyout_dir};#store raw and set folders
@@ -143,8 +143,17 @@ for my $id (0..$#out){
 ################# energy ############
 ##!    total energy              =    (-158.01049803) Ry
 #the first energy corresponds to the structure in input file
-	my @totalenergy = grep {if(m/^\s*!\s*total energy\s*=\s*([-+]?\d*\.?\d*)/){$_ = $1*$ry2eV - $dftBE_all + $expBE_be;}} @all;
-    #my	$lmpE = (($totE - $sumDFTatomE) + $sumLMPatomE) / $atomnumber; #use in MS perl
+	my @totalenergy;
+	if($useFormationEnergy eq "yes"){
+		@totalenergy = grep {if(m/^\s*!\s*total energy\s*=\s*([-+]?\d*\.?\d*)/){
+		$_ = $1*$ry2eV - $dftBE_all + $expBE_be;}} @all;
+	}
+	else{
+		@totalenergy = grep {if(m/^\s*!\s*total energy\s*=\s*([-+]?\d*\.?\d*)/){
+		$_ = $1*$ry2eV;}} @all;
+	}
+
+	#my	$lmpE = (($totE - $sumDFTatomE) + $sumLMPatomE) / $atomnumber; #use in MS perl
     unless (@totalenergy){
 		print "no total energy was found in $out[$id] or dft calculation failed!!\n";
 	    return

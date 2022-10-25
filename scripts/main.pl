@@ -21,7 +21,7 @@ require './lmp_label.pl';
 require './dp_train.pl';
 require './matplot.pl';
 #my $onlyfinal_dptrain = "no";#yes or no (not work currently)
-
+my $initial_trainOnly = "no";#if "yes", only conduct the initial training
 my $forkNo = 1;#modify in the future
 my $pm = Parallel::ForkManager->new("$forkNo");
 #load all settings first
@@ -35,6 +35,7 @@ my %scf_setting = %{$scf_setting_hr};
 my $jobtype = $system_setting{jobtype};
 my $currentPath = $system_setting{script_dir};
 my $mainPath = $system_setting{main_dir};# main path of dpgen folder
+my $useFormationEnergy = $system_setting{useFormationEnergy};
 #check all QE input file setting
 my @ref_QE = `egrep "etot_conv_thr|forc_conv_thr|pseudo_dir|ecutwfc|ecutrho" $currentPath/QE_script.in`;
 chomp @ref_QE;
@@ -166,13 +167,19 @@ if($jobtype eq "new"){# a brand new dpgen job. No previous labeled npy files exi
              #density (g/cm3), arrangement, mass, lat a , lat c
             @{$used_element{$_}} = &elements::eleObj("$_");
         }    
-    
-        my @BE_all = `cat $npy_setting{inistr_dir}/dpE2expE.dat|grep -v "#"|awk '{print \$3}'`;
-        die "no dpE2expE.dat in $npy_setting{inistr_dir}\n" unless (@BE_all);
-        chomp @BE_all;
-        $npy_setting{dftBE} = $BE_all[0];#summation of dft binding energies of all atoms
-        $npy_setting{expBE} = $BE_all[1];#summation of exp binding energies of all atoms
-        &DFTout2npy_QE(\%system_setting,\%npy_setting);#send settings for getting npy
+        if($useFormationEnergy eq "yes"){
+            my @BE_all = `cat $npy_setting{inistr_dir}/dpE2expE.dat|grep -v "#"|awk '{print \$3}'`;
+            die "no dpE2expE.dat in $npy_setting{inistr_dir}\n" unless (@BE_all);
+            chomp @BE_all;
+            $npy_setting{dftBE} = $BE_all[0];#summation of dft binding energies of all atoms
+            $npy_setting{expBE} = $BE_all[1];#summation of exp binding energies of all atoms
+            &DFTout2npy_QE(\%system_setting,\%npy_setting);#send settings for getting npy
+        }
+        else{
+            $npy_setting{dftBE} = 0.0;#not used
+            $npy_setting{expBE} = 0.0;#not used
+            &DFTout2npy_QE(\%system_setting,\%npy_setting);#send settings for getting npy
+        }
     }
 }
 elsif($jobtype eq "rerun"){# old npy files exist
@@ -209,7 +216,21 @@ else{
 
 # training on all npy files in all_npy* folders
 print "#***Doing initial deepMD training\n";
-my @extraFolders = `find $mainPath/all_npy* -maxdepth 2 -mindepth 2 -type d -name "*"`;#all npy files
+
+my @allnpys = `find $mainPath/all_npy*  -type f -name "*.npy"`;
+chomp @allnpys;
+my %allnpyfolders;
+for (@allnpys){
+    my $temp =  `dirname $_`;
+    chomp $temp;
+    my $temp1 =  `dirname $temp`;
+    chomp $temp1;
+    #print "$temp1\n";
+    $allnpyfolders{$temp1} = 1;
+}
+my @extraFolders = sort keys %allnpyfolders;
+
+#my @extraFolders = `find $mainPath/all_npy* -maxdepth 2 -mindepth 2 -type d -name "*"`;#all npy files
 chomp @extraFolders;
 die "no npy files in  $mainPath/all_npy* folders\n" unless(@extraFolders);
 #
@@ -233,6 +254,7 @@ print "making plots for checking training results before iteration loop\n";
 
 print "\n\n#****Main iteration begins****#\n";
 my $begIter = $system_setting{begIter};#assign correct beginning iteration number
+die "Only initial training is done! (\$initial_trainOnly = \"yes\")\n" if($initial_trainOnly eq "yes");
 
 for my $iter ($begIter..$#iteration){
     $system_setting{iter} = $iter;
@@ -272,8 +294,9 @@ for my $iter ($begIter..$#iteration){
             print "#scf of sout file in $folder has problem!!!\n";
         }
     } 
-#collect all sout and in files for a structure for npy convertion    
+#collect all sout and in files for a structure for npy convertion (could no good sout files if all failed)   
     my @str = keys %strFolders;
+    
     for my $str (@str){
         `mkdir -p  $mainPath/DFT_output/$str`;#collect all dft in and sout files originated from the same initial structure
         my @temp = @{$strFolders{$str}};
@@ -298,7 +321,29 @@ for my $iter ($begIter..$#iteration){
         &DFTout2npy_QE(\%system_setting,\%npy_setting);
     }#str loop
 # training on the all npy files (all_npy*)->all_npy00,all_npy01 from previous dpgen process
-    my @extraFolders = `find $mainPath/all_npy* -maxdepth 2 -mindepth 2 -type d -name "*"`;
+    my @allnpys = `find $mainPath/all_npy*  -type f -name "*.npy"`;
+    chomp @allnpys;
+    my %allnpyfolders;
+    for (@allnpys){
+        my $temp =  `dirname $_`;
+        chomp $temp;
+        my $temp1 =  `dirname $temp`;
+        chomp $temp1;
+        #print "$temp1\n";
+        $allnpyfolders{$temp1} = 1;
+    }
+    my @extraFolders = sort keys %allnpyfolders;
+
+    #housekeeping 
+    my @tempfolders = `find $mainPath/all_npy* -maxdepth 2 -mindepth 2 -type d -name "*"`;
+    chomp @tempfolders;
+    for (@tempfolders){
+        unless(exists $allnpyfolders{$_}){
+            print "no npy files in $_\n";
+            `rm -rf $_`;
+        }
+    }
+    #my @extraFolders = `find $mainPath/all_npy* -maxdepth 2 -mindepth 2 -type d -name "*"`;
     chomp @extraFolders;
     print "#Doing dp train at iteration $iter\n\n";
     $dptrain_setting{allnpy_dir} = [@extraFolders];

@@ -16,6 +16,12 @@ export KMP_AFFINITY=granularity=fine,compact,1,0
 export KMP_BLOCKTIME=0
 export KMP_SETTINGS=TRUE
 
+#adjsut ram consumption
+memory=`free -m|grep Mem|awk '{print $NF}'`
+memory=`printf %.0f $(echo "$memory * 0.98" |bc)`
+SLURM_MEM_PER_NODE=$memory
+export SLURM_MEM_PER_NODE
+
 #sed_anchor02
 dp train Template.json
 #sed_anchor03

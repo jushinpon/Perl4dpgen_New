@@ -36,4 +36,7 @@ to establish a folder name the same as in the dpgen.json
 2. dp_ 
 3. you may modify slurm_dp.sh in the scripts folder for your machines (partition...), but you need to set anaconda base env first.
 inform the administrator to put anaconda path in /etc/bashrc for all users.
- 
+
+
+ main.pl:
+ my $initial_trainOnly = "yes";#if "yes", only conduct the initial training

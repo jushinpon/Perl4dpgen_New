@@ -15,17 +15,18 @@ chdir("..");
 my $mainPath = getcwd();# main path of Perl4dpgen dir
 chdir("$currentPath");
 my $NVT4str = "yes";
-my @allNVTstru = ("N2","N2SCF","N25","N154","N568584","N570747","N672233","N754514","N999498","N1080711","N1176403","B160","B161","B22046","B541848","B570316","B570602","B632401","B1193675","B1198656","B1202723","B1228790","BN344","BN534","BN984","BN1599","BN1639","BN2653","BN7991");#("bcc_bulk");#,"fcc_bulk","hcp_bulk");for surface
+my @allNVTstru = ("BN344","BN534","BN984","BN1599","BN1639","BN2653","BN7991");#("bcc_bulk");#,"fcc_bulk","hcp_bulk");for surface
 # should have the same names as in the initial folder
-my $NPT4str = "no";
-my @allNPTstru = ("N2","N2SCF","N25","N154","N568584","N570747","N672233","N754514","N999498","N1080711","N1176403","B160","B161","B22046","B541848","B570316","B570602","B632401","B1193675","B1198656","B1202723","B1228790","BN344","BN534","BN984","BN1599","BN1639","BN2653","BN7991");
+my $NPT4str = "yes";
+my @allNPTstru = ("BN344","BN534","BN984","BN1599","BN1639","BN2653","BN7991");
 my @allPress = (1,10000);#unit:bar,the pressures your want to use for labelling
 my @allStep = (3000,6000);#time step number, should be larger than 500 (default output_freq)
-my @allIniStr =  ("N2","N2SCF","N25","N154","N568584","N570747","N672233","N754514","N999498","N1080711","N1176403","B160","B161","B22046","B541848","B570316","B570602","B632401","B1193675","B1198656","B1202723","B1228790","BN344","BN534","BN984","BN1599","BN1639","BN2653","BN7991");#for the fisrt dp train,should include all structures for labeling
+my @allIniStr =  ("BN344","BN534","BN984","BN1599","BN1639","BN2653","BN7991");#for the fisrt dp train,should include all structures for labeling
+#my @allIniStr =  ("N2","N2SCF","N25","N154","N568584","N570747","N672233","N754514","N999498","N1080711","N1176403","B160","B161","B22046","B541848","B570316","B570602","B632401","B1193675","B1198656","B1202723","B1228790","BN344","BN534","BN984","BN1599","BN1639","BN2653","BN7991");#for the fisrt dp train,should include all structures for labeling
 #"bcc_bulk",
 my %system_setting;
 #$system_setting{QE_pot} = "/opt/QEpot/SSSP_precision.json";#"new";#check readme
-$system_setting{useFormationEner} = "no";#"new";#check readme
+$system_setting{useFormationEnergy} = "no";#if "yes", you need to prepare dpE2expE.dat in each folder under ./initial
 $system_setting{QE_pot_json} = "/opt/QEpot/SSSP_precision.json";#"new";#check readme
 $system_setting{jobtype} = "new";#"new";#check readme
 $system_setting{begIter} = 0;#0 for $system_setting{jobtype} = "new" or "dpgen_again"
